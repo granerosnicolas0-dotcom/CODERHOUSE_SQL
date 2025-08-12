@@ -1,1 +1,93 @@
+-- Creación de la base de datos
+CREATE DATABASE IF NOT EXISTS InterHogar;
+USE InterHogar;
 
+-- Tabla: Nacionalidades
+CREATE TABLE Nacionalidades (
+    id_nacionalidad INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion VARCHAR(100) NOT NULL
+);
+
+-- Tabla: Clientes
+CREATE TABLE Clientes (
+    id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
+    telefono VARCHAR(20),
+    direccion VARCHAR(255),
+    id_nacionalidad INT,
+    FOREIGN KEY (id_nacionalidad) REFERENCES Nacionalidades(id_nacionalidad)
+);
+
+-- Tabla: Planes
+CREATE TABLE Planes (
+    id_plan INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_plan VARCHAR(100) NOT NULL,
+    velocidad_mb INT NOT NULL,
+    precio_mensual DECIMAL(10,2) NOT NULL
+);
+
+-- Tabla: ServiciosContratados
+CREATE TABLE ServiciosContratados (
+    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_plan INT NOT NULL,
+    fecha_alta DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_plan) REFERENCES Planes(id_plan)
+);
+
+-- Tabla: Productos
+CREATE TABLE Productos (
+    id_producto INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10,2) NOT NULL,
+    stock INT DEFAULT 0
+);
+
+-- Tabla: Ordenes
+CREATE TABLE Ordenes (
+    id_orden INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    fecha_compra DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente)
+);
+
+-- Tabla: DetalleOrden
+CREATE TABLE DetalleOrden (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_orden INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_orden) REFERENCES Ordenes(id_orden),
+    FOREIGN KEY (id_producto) REFERENCES Productos(id_producto)
+);
+
+-- Tabla: Facturas
+CREATE TABLE Facturas (
+    id_factura INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    monto_total DECIMAL(10,2) NOT NULL,
+    tipo VARCHAR(20) NOT NULL,
+    id_servicio INT,
+    id_orden INT,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_servicio) REFERENCES ServiciosContratados(id_servicio),
+    FOREIGN KEY (id_orden) REFERENCES Ordenes(id_orden)
+);
+
+-- Tabla: Pagos
+CREATE TABLE Pagos (
+    id_pago INT AUTO_INCREMENT PRIMARY KEY,
+    id_factura INT NOT NULL,
+    fecha_pago DATE NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
+    metodo_pago VARCHAR(50) NOT NULL,
+    FOREIGN KEY (id_factura) REFERENCES Facturas(id_factura)
+);
