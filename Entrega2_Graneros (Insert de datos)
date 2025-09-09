@@ -1,0 +1,62 @@
+-- 02_insert_datos.sql (InterHogar)
+USE InterHogar;
+
+-- Nacionalidades
+INSERT INTO Nacionalidades (descripcion) VALUES ('Argentina'), ('Uruguaya'), ('Chilena')
+ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion);
+
+-- Clientes
+INSERT INTO Clientes (nombre, apellido, email, telefono, direccion, id_nacionalidad) VALUES
+ ('Ana', 'Pérez', 'ana.perez@example.com', '1122334455', 'Av. Siempre Viva 123', 1),
+ ('Luis', 'Gómez', 'luis.gomez@example.com', '1133445566', 'Calle Falsa 456', 2),
+ ('Marta', 'Díaz', 'marta.diaz@example.com', '1144556677', 'Pasaje Luna 789', 1)
+ON DUPLICATE KEY UPDATE email = VALUES(email);
+
+-- Planes
+INSERT INTO Planes (nombre_plan, velocidad_mb, precio_mensual) VALUES
+ ('Plan Básico', 50, 3500.00),
+ ('Plan Avanzado', 100, 5500.00),
+ ('Plan Premium', 300, 8900.00)
+ON DUPLICATE KEY UPDATE precio_mensual = VALUES(precio_mensual);
+
+-- Servicios Contratados
+INSERT INTO ServiciosContratados (id_cliente, id_plan, fecha_alta, estado) VALUES
+ (1, 1, '2025-07-01', 'Activo'),
+ (2, 2, '2025-07-05', 'Activo'),
+ (3, 3, '2025-08-01', 'Suspendido')
+ON DUPLICATE KEY UPDATE estado = VALUES(estado);
+
+-- Productos
+INSERT INTO Productos (nombre, descripcion, precio, stock) VALUES
+ ('Router WiFi', 'Router inalámbrico 5GHz', 12000.00, 20),
+ ('Switch 8 Puertos', 'Switch gigabit 8 puertos', 18000.00, 15),
+ ('Cable Ethernet 10m', 'Cable categoría 6 de 10 metros', 2500.00, 100),
+ ('Cámara IP', 'Cámara de seguridad WiFi', 22000.00, 10)
+ON DUPLICATE KEY UPDATE precio = VALUES(precio), stock = VALUES(stock);
+
+-- Órdenes
+INSERT INTO Ordenes (id_cliente, fecha_compra, estado) VALUES
+ (1, '2025-08-10', 'Pendiente'),
+ (2, '2025-08-15', 'Completada'),
+ (3, '2025-09-01', 'Pendiente');
+
+-- Detalle Órdenes
+INSERT INTO DetalleOrden (id_orden, id_producto, cantidad, precio_unitario) VALUES
+ (1, 1, 1, 12000.00),
+ (1, 3, 2, 2500.00),
+ (2, 2, 1, 18000.00),
+ (2, 3, 5, 2500.00),
+ (3, 4, 2, 22000.00);
+
+-- Facturas
+INSERT INTO Facturas (id_cliente, fecha_emision, monto_total, tipo, id_servicio, id_orden) VALUES
+ (1, '2025-08-11', 17000.00, 'Orden', NULL, 1),
+ (2, '2025-08-16', 30500.00, 'Orden', NULL, 2),
+ (1, '2025-08-30', 3500.00, 'Servicio', 1, NULL),
+ (2, '2025-08-30', 5500.00, 'Servicio', 2, NULL);
+
+-- Pagos
+INSERT INTO Pagos (id_factura, fecha_pago, monto, metodo_pago) VALUES
+ (1, '2025-08-12', 17000.00, 'Tarjeta de Crédito'),
+ (2, '2025-08-20', 30500.00, 'Transferencia'),
+ (3, '2025-09-01', 3500.00, 'Débito Automático');
