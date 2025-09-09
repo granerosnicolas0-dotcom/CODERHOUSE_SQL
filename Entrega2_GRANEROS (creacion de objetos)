@@ -1,0 +1,150 @@
+-- 01_creacion_objetos.sql (InterHogar)
+USE InterHogar;
+
+-- =============================================
+-- VISTAS
+-- =============================================
+CREATE OR REPLACE VIEW vw_facturacion_mensual AS
+SELECT YEAR(fecha_emision) AS anio, MONTH(fecha_emision) AS mes, SUM(monto_total) AS total_facturado
+FROM Facturas
+GROUP BY YEAR(fecha_emision), MONTH(fecha_emision);
+
+CREATE OR REPLACE VIEW vw_clientes_activos AS
+SELECT c.id_cliente, CONCAT(c.nombre, ' ', c.apellido) AS cliente, s.id_servicio, s.fecha_alta, s.estado
+FROM Clientes c
+JOIN ServiciosContratados s ON c.id_cliente = s.id_cliente
+WHERE s.estado = 'Activo';
+
+CREATE OR REPLACE VIEW vw_top_productos AS
+SELECT p.id_producto, p.nombre, SUM(d.cantidad) AS total_vendido
+FROM Productos p
+JOIN DetalleOrden d ON p.id_producto = d.id_producto
+GROUP BY p.id_producto, p.nombre
+ORDER BY total_vendido DESC;
+
+CREATE OR REPLACE VIEW vw_ordenes_clientes AS
+SELECT o.id_orden, CONCAT(c.nombre, ' ', c.apellido) AS cliente, o.fecha_compra, o.estado
+FROM Ordenes o
+JOIN Clientes c ON o.id_cliente = c.id_cliente;
+
+CREATE OR REPLACE VIEW vw_stock_bajo AS
+SELECT id_producto, nombre, stock
+FROM Productos
+WHERE stock < 5;
+
+-- =============================================
+-- FUNCIONES
+-- =============================================
+DELIMITER $$
+CREATE OR REPLACE FUNCTION fn_total_orden(p_id_orden INT) RETURNS DECIMAL(10,2) DETERMINISTIC
+BEGIN
+    DECLARE v_total DECIMAL(10,2);
+    SELECT SUM(cantidad * precio_unitario) INTO v_total FROM DetalleOrden WHERE id_orden = p_id_orden;
+    RETURN IFNULL(v_total,0);
+END$$
+
+CREATE OR REPLACE FUNCTION fn_stock_producto(p_id_producto INT) RETURNS INT DETERMINISTIC
+BEGIN
+    DECLARE v_stock INT;
+    SELECT stock INTO v_stock FROM Productos WHERE id_producto = p_id_producto;
+    RETURN IFNULL(v_stock,0);
+END$$
+
+CREATE OR REPLACE FUNCTION fn_deuda_cliente(p_id_cliente INT) RETURNS DECIMAL(10,2) DETERMINISTIC
+BEGIN
+    DECLARE v_total DECIMAL(10,2);
+    SELECT IFNULL(SUM(f.monto_total),0) - IFNULL(SUM(p.monto),0)
+    INTO v_total FROM Facturas f LEFT JOIN Pagos p ON f.id_factura = p.id_factura
+    WHERE f.id_cliente = p_id_cliente;
+    RETURN IFNULL(v_total,0);
+END$$
+DELIMITER ;
+
+-- =============================================
+-- STORED PROCEDURES
+-- =============================================
+DELIMITER $$
+CREATE OR REPLACE PROCEDURE sp_crear_orden(IN p_id_cliente INT, IN p_items_json JSON)
+BEGIN
+    DECLARE v_id_orden INT;
+    DECLARE i INT DEFAULT 0;
+    DECLARE n INT;
+    DECLARE v_id_producto INT;
+    DECLARE v_cantidad INT;
+    DECLARE v_precio DECIMAL(10,2);
+
+    START TRANSACTION;
+    INSERT INTO Ordenes(id_cliente, fecha_compra, estado) VALUES (p_id_cliente, CURRENT_DATE, 'Pendiente');
+    SET v_id_orden = LAST_INSERT_ID();
+
+    SET n = JSON_LENGTH(p_items_json);
+    WHILE i < n DO
+        SET v_id_producto = JSON_EXTRACT(p_items_json, CONCAT('$[', i, '].id_producto'));
+        SET v_cantidad    = JSON_EXTRACT(p_items_json, CONCAT('$[', i, '].cantidad'));
+        SET v_precio      = JSON_EXTRACT(p_items_json, CONCAT('$[', i, '].precio_unitario'));
+
+        INSERT INTO DetalleOrden(id_orden, id_producto, cantidad, precio_unitario)
+        VALUES (v_id_orden, v_id_producto, v_cantidad, v_precio);
+
+        UPDATE Productos SET stock = stock - v_cantidad WHERE id_producto = v_id_producto;
+        SET i = i + 1;
+    END WHILE;
+    COMMIT;
+END$$
+
+CREATE OR REPLACE PROCEDURE sp_generar_factura(IN p_id_cliente INT, IN p_tipo VARCHAR(20))
+BEGIN
+    DECLARE v_total DECIMAL(10,2);
+    IF p_tipo = 'Orden' THEN
+        SELECT SUM(fn_total_orden(o.id_orden)) INTO v_total FROM Ordenes o WHERE o.id_cliente = p_id_cliente AND o.estado = 'Pendiente';
+        INSERT INTO Facturas(id_cliente, fecha_emision, monto_total, tipo, id_orden)
+        VALUES (p_id_cliente, CURRENT_DATE, IFNULL(v_total,0), 'Orden', NULL);
+    END IF;
+    IF p_tipo = 'Servicio' THEN
+        SELECT SUM(p.precio_mensual) INTO v_total FROM ServiciosContratados s JOIN Planes p ON s.id_plan = p.id_plan WHERE s.id_cliente = p_id_cliente AND s.estado = 'Activo';
+        INSERT INTO Facturas(id_cliente, fecha_emision, monto_total, tipo, id_servicio)
+        VALUES (p_id_cliente, CURRENT_DATE, IFNULL(v_total,0), 'Servicio', NULL);
+    END IF;
+END$$
+DELIMITER ;
+
+-- =============================================
+-- TRIGGERS
+-- =============================================
+DELIMITER $$
+CREATE OR REPLACE TRIGGER tr_detalleorden_ai AFTER INSERT ON DetalleOrden
+FOR EACH ROW
+BEGIN
+    UPDATE Productos SET stock = stock - NEW.cantidad WHERE id_producto = NEW.id_producto;
+    IF (SELECT stock FROM Productos WHERE id_producto = NEW.id_producto) < 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: stock insuficiente';
+    END IF;
+END$$
+
+CREATE OR REPLACE TRIGGER tr_detalleorden_ad AFTER DELETE ON DetalleOrden
+FOR EACH ROW
+BEGIN
+    UPDATE Productos SET stock = stock + OLD.cantidad WHERE id_producto = OLD.id_producto;
+END$$
+
+CREATE OR REPLACE TRIGGER tr_clientes_bi BEFORE INSERT ON Clientes
+FOR EACH ROW
+BEGIN
+    SET NEW.email = LOWER(TRIM(NEW.email));
+    SET NEW.nombre = TRIM(NEW.nombre);
+    SET NEW.apellido = TRIM(NEW.apellido);
+END$$
+
+CREATE OR REPLACE TRIGGER tr_pagos_ai AFTER INSERT ON Pagos
+FOR EACH ROW
+BEGIN
+    DECLARE v_total_pago DECIMAL(10,2);
+    DECLARE v_monto_factura DECIMAL(10,2);
+    SELECT SUM(monto) INTO v_total_pago FROM Pagos WHERE id_factura = NEW.id_factura;
+    SELECT monto_total INTO v_monto_factura FROM Facturas WHERE id_factura = NEW.id_factura;
+    IF v_total_pago > v_monto_factura THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: el pago excede el monto de la factura';
+    END IF;
+END$$
+DELIMITER ;
+ 
