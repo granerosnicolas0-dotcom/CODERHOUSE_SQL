@@ -1,0 +1,430 @@
+-- Archivo: InterHogar.sql
+-- Contiene: creación de base, tablas, inserts, vistas, funciones, procedimientos almacenados y triggers
+-- Generado para: Proyecto InterHogar
+-- Fecha: 2025-09-23
+
+-- 1) Creación de la base y uso
+DROP DATABASE IF EXISTS InterHogar;
+CREATE DATABASE IF NOT EXISTS InterHogar;
+USE InterHogar;
+
+-- 2) Tablas (esquema original)
+CREATE TABLE Nacionalidades (
+    id_nacionalidad INT AUTO_INCREMENT PRIMARY KEY,
+    descripcion VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Clientes (
+    id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
+    telefono VARCHAR(20),
+    direccion VARCHAR(255),
+    id_nacionalidad INT,
+    FOREIGN KEY (id_nacionalidad) REFERENCES Nacionalidades(id_nacionalidad)
+);
+
+CREATE TABLE Planes (
+    id_plan INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_plan VARCHAR(100) NOT NULL,
+    velocidad_mb INT NOT NULL,
+    precio_mensual DECIMAL(10,2) NOT NULL
+);
+
+CREATE TABLE ServiciosContratados (
+    id_servicio INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_plan INT NOT NULL,
+    fecha_alta DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_plan) REFERENCES Planes(id_plan)
+);
+
+CREATE TABLE Productos (
+    id_producto INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10,2) NOT NULL,
+    stock INT DEFAULT 0
+);
+
+CREATE TABLE Ordenes (
+    id_orden INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    fecha_compra DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente)
+);
+
+CREATE TABLE DetalleOrden (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_orden INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_orden) REFERENCES Ordenes(id_orden),
+    FOREIGN KEY (id_producto) REFERENCES Productos(id_producto)
+);
+
+CREATE TABLE Facturas (
+    id_factura INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    monto_total DECIMAL(10,2) NOT NULL,
+    tipo VARCHAR(20) NOT NULL,
+    id_servicio INT,
+    id_orden INT,
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_servicio) REFERENCES ServiciosContratados(id_servicio),
+    FOREIGN KEY (id_orden) REFERENCES Ordenes(id_orden)
+);
+
+CREATE TABLE Pagos (
+    id_pago INT AUTO_INCREMENT PRIMARY KEY,
+    id_factura INT NOT NULL,
+    fecha_pago DATE NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
+    metodo_pago VARCHAR(50) NOT NULL,
+    FOREIGN KEY (id_factura) REFERENCES Facturas(id_factura)
+);
+
+-- 3) Inserts de prueba (50 registros, balanceados)
+-- Nacionalidades (10)
+INSERT INTO Nacionalidades (descripcion) VALUES
+('Argentina'),
+('Chile'),
+('Uruguay'),
+('Paraguay'),
+('Bolivia'),
+('Perú'),
+('Brasil'),
+('Colombia'),
+('Venezuela'),
+('México');
+
+-- Planes (5)
+INSERT INTO Planes (nombre_plan, velocidad_mb, precio_mensual) VALUES
+('Plan Básico', 50, 2500.00),
+('Plan Familiar', 100, 4000.00),
+('Plan Gamer', 200, 6500.00),
+('Plan Ultra', 500, 12000.00),
+('Plan Corporativo', 1000, 25000.00);
+
+-- Productos (10)
+INSERT INTO Productos (nombre, descripcion, precio, stock) VALUES
+('Router WiFi', 'Router estándar de 2 antenas', 8000.00, 15),
+('Router Pro', 'Router profesional con doble banda', 15000.00, 8),
+('Repetidor WiFi', 'Amplificador de señal', 6000.00, 20),
+('Cable UTP 10m', 'Cable de red de 10 metros', 3000.00, 50),
+('Cable UTP 20m', 'Cable de red de 20 metros', 5000.00, 30),
+('Switch 5 puertos', 'Switch de 5 puertos Gigabit', 7000.00, 12),
+('Switch 8 puertos', 'Switch de 8 puertos Gigabit', 9500.00, 10),
+('ONT Fiber', 'Módem de fibra óptica', 18000.00, 5),
+('Cámara IP', 'Cámara de seguridad WiFi', 12000.00, 7),
+('Smart TV Box', 'Box Android TV con apps preinstaladas', 10000.00, 9);
+
+-- Clientes (20)
+INSERT INTO Clientes (nombre, apellido, email, telefono, direccion, id_nacionalidad) VALUES
+('Juan', 'Pérez', 'juanperez@mail.com', '1112131415', 'Calle Falsa 123', 1),
+('María', 'Gómez', 'mariagomez@mail.com', '1116171819', 'Av. Siempre Viva 742', 2),
+('Carlos', 'López', 'carloslopez@mail.com', '1120212223', 'San Martín 555', 3),
+('Ana', 'Fernández', 'anafernandez@mail.com', '1124252627', 'Mitre 890', 4),
+('Lucía', 'Martínez', 'luciamartinez@mail.com', '1128293031', 'Belgrano 123', 5),
+('Pedro', 'Sosa', 'pedrososa@mail.com', '1132333435', 'Av. Libertad 999', 6),
+('Sofía', 'Rodríguez', 'sofiarodriguez@mail.com', '1136373839', 'Italia 321', 7),
+('Diego', 'Torres', 'diegotorres@mail.com', '1140414243', 'Uruguay 567', 8),
+('Laura', 'Silva', 'laurasilva@mail.com', '1144454647', 'Paraguay 789', 9),
+('Martín', 'Cruz', 'martincruz@mail.com', '1148495051', 'México 111', 10),
+('Paula', 'Molina', 'paulamolina@mail.com', '1152535455', 'Bolivia 234', 1),
+('José', 'Ramírez', 'joseramirez@mail.com', '1156575859', 'Perú 987', 2),
+('Cecilia', 'Navarro', 'cecilianavarro@mail.com', '1160616263', 'Chile 654', 3),
+('Andrés', 'Herrera', 'andresherrera@mail.com', '1164656667', 'Av. Colon 123', 4),
+('Valentina', 'Aguilar', 'valentinaaguilar@mail.com', '1168697071', 'Cordoba 222', 5),
+('Federico', 'Morales', 'federicomorales@mail.com', '1172737475', 'Santa Fe 333', 6),
+('Carolina', 'Vega', 'carolinavega@mail.com', '1176777879', 'Mendoza 444', 7),
+('Gabriel', 'Castro', 'gabrielcastro@mail.com', '1180818283', 'Rosario 555', 8),
+('Julieta', 'Luna', 'julietaluna@mail.com', '1184858697', 'Corrientes 666', 9),
+('Nicolás', 'Ortega', 'nicolasortega@mail.com', '1188899091', 'Formosa 777', 10);
+
+-- ServiciosContratados (10)
+INSERT INTO ServiciosContratados (id_cliente, id_plan, fecha_alta, estado) VALUES
+(1, 1, '2023-01-15', 'Activo'),
+(2, 2, '2023-02-10', 'Activo'),
+(3, 3, '2023-03-05', 'Activo'),
+(4, 2, '2023-04-20', 'Activo'),
+(5, 4, '2023-05-18', 'Suspendido'),
+(6, 1, '2023-06-25', 'Activo'),
+(7, 5, '2023-07-12', 'Activo'),
+(8, 3, '2023-08-08', 'Activo'),
+(9, 2, '2023-09-01', 'Baja'),
+(10, 4, '2023-10-15', 'Activo');
+
+-- Ordenes (5)
+INSERT INTO Ordenes (id_cliente, fecha_compra, estado) VALUES
+(1, '2023-03-01', 'Completada'),
+(2, '2023-03-10', 'Completada'),
+(3, '2023-04-05', 'Completada'),
+(4, '2023-04-12', 'Pendiente'),
+(5, '2023-05-09', 'Completada');
+
+-- DetalleOrden (6)
+INSERT INTO DetalleOrden (id_orden, id_producto, cantidad, precio_unitario) VALUES
+(1, 1, 1, 8000.00),
+(1, 4, 2, 3000.00),
+(2, 2, 1, 15000.00),
+(3, 3, 2, 6000.00),
+(4, 5, 1, 5000.00),
+(5, 6, 1, 7000.00);
+
+-- Facturas (5)
+INSERT INTO Facturas (id_cliente, fecha_emision, monto_total, tipo, id_servicio, id_orden) VALUES
+(1, '2023-03-05', 14000.00, 'Servicio', 1, NULL),
+(2, '2023-03-15', 19000.00, 'Mixta', 2, 2),
+(3, '2023-04-10', 12000.00, 'Producto', NULL, 3),
+(4, '2023-04-20', 5000.00, 'Producto', NULL, 4),
+(5, '2023-05-12', 7000.00, 'Producto', NULL, 5);
+
+-- Pagos (5)
+INSERT INTO Pagos (id_factura, fecha_pago, monto, metodo_pago) VALUES
+(1, '2023-03-06', 14000.00, 'Tarjeta de crédito'),
+(2, '2023-03-20', 19000.00, 'Transferencia bancaria'),
+(3, '2023-04-15', 12000.00, 'Efectivo'),
+(4, '2023-04-22', 5000.00, 'Tarjeta de débito'),
+(5, '2023-05-15', 7000.00, 'Mercado Pago');
+
+-- 4) VISTAS útiles
+-- 4.1: Clientes con su servicio activo (si tienen)
+CREATE OR REPLACE VIEW v_clientes_servicio AS
+SELECT c.id_cliente, CONCAT(c.nombre,' ',c.apellido) AS cliente, c.email, c.telefono, c.direccion,
+       n.descripcion AS nacionalidad,
+       sc.id_servicio, p.nombre_plan, p.velocidad_mb, p.precio_mensual, sc.fecha_alta, sc.estado
+FROM Clientes c
+LEFT JOIN Nacionalidades n ON c.id_nacionalidad = n.id_nacionalidad
+LEFT JOIN ServiciosContratados sc ON c.id_cliente = sc.id_cliente
+LEFT JOIN Planes p ON sc.id_plan = p.id_plan;
+
+-- Objetivo: ofrecer un tablero con clientes y su servicio asociado (si lo tienen).
+-- Tablas: Clientes, Nacionalidades, ServiciosContratados, Planes
+
+-- 4.2: Facturación mensual por año
+CREATE OR REPLACE VIEW v_facturacion_mensual AS
+SELECT YEAR(f.fecha_emision) AS anio, MONTH(f.fecha_emision) AS mes, 
+       SUM(f.monto_total) AS total_mes, COUNT(*) AS facturas_mes
+FROM Facturas f
+GROUP BY YEAR(f.fecha_emision), MONTH(f.fecha_emision)
+ORDER BY anio, mes;
+
+-- Objetivo: resumen mensual de facturación.
+-- Tablas: Facturas
+
+-- 4.3: Productos con stock bajo (umbral = 5)
+CREATE OR REPLACE VIEW v_productos_stock_bajo AS
+SELECT id_producto, nombre, stock, precio
+FROM Productos
+WHERE stock <= 5;
+
+-- Objetivo: identificar productos para reponer.
+-- Tablas: Productos
+
+-- 4.4: Ordenes con detalles y totales calculados
+CREATE OR REPLACE VIEW v_ordenes_detalle_total AS
+SELECT o.id_orden, o.id_cliente, CONCAT(c.nombre,' ',c.apellido) AS cliente, o.fecha_compra, o.estado,
+       SUM(do.cantidad * do.precio_unitario) AS total_orden,
+       COUNT(do.id_detalle) AS items
+FROM Ordenes o
+JOIN Clientes c ON o.id_cliente = c.id_cliente
+LEFT JOIN DetalleOrden do ON o.id_orden = do.id_orden
+GROUP BY o.id_orden;
+
+-- Objetivo: vista para ver resumen de ordenes con su total.
+-- Tablas: Ordenes, Clientes, DetalleOrden
+
+-- 4.5: Clientes con saldo pendiente (factura sin pago total)
+CREATE OR REPLACE VIEW v_clientes_saldo_pendiente AS
+SELECT f.id_factura, f.id_cliente, CONCAT(c.nombre,' ',c.apellido) AS cliente, f.monto_total,
+       COALESCE(SUM(p.monto),0) AS total_pagado,
+       (f.monto_total - COALESCE(SUM(p.monto),0)) AS saldo_pendiente
+FROM Facturas f
+JOIN Clientes c ON f.id_cliente = c.id_cliente
+LEFT JOIN Pagos p ON f.id_factura = p.id_factura
+GROUP BY f.id_factura
+HAVING saldo_pendiente > 0;
+
+-- Objetivo: listar facturas con saldo pendiente.
+-- Tablas: Facturas, Clientes, Pagos
+
+-- 5) FUNCIONES (MySQL)
+DELIMITER $$
+
+-- 5.1: Función que calcula el total de una orden sumando su detalle
+CREATE FUNCTION fn_total_orden(p_id_orden INT) RETURNS DECIMAL(12,2)
+DETERMINISTIC
+BEGIN
+    DECLARE v_total DECIMAL(12,2) DEFAULT 0;
+    SELECT COALESCE(SUM(cantidad * precio_unitario),0) INTO v_total
+    FROM DetalleOrden WHERE id_orden = p_id_orden;
+    RETURN v_total;
+END $$
+
+-- 5.2: Función que devuelve el estado del servicio activo de un cliente (primero que aparece)
+CREATE FUNCTION fn_estado_servicio_cliente(p_id_cliente INT) RETURNS VARCHAR(50)
+DETERMINISTIC
+BEGIN
+    DECLARE v_estado VARCHAR(50) DEFAULT 'Sin servicio';
+    SELECT sc.estado INTO v_estado FROM ServiciosContratados sc
+    WHERE sc.id_cliente = p_id_cliente
+    ORDER BY sc.fecha_alta DESC LIMIT 1;
+    IF v_estado IS NULL THEN
+        RETURN 'Sin servicio';
+    END IF;
+    RETURN v_estado;
+END $$
+
+-- 5.3: Función que devuelve el saldo pendiente total de un cliente (sum de facturas - pagos)
+CREATE FUNCTION fn_saldo_pendiente_cliente(p_id_cliente INT) RETURNS DECIMAL(12,2)
+DETERMINISTIC
+BEGIN
+    DECLARE v_total_facturas DECIMAL(12,2) DEFAULT 0;
+    DECLARE v_total_pagos DECIMAL(12,2) DEFAULT 0;
+    SELECT COALESCE(SUM(monto_total),0) INTO v_total_facturas FROM Facturas WHERE id_cliente = p_id_cliente;
+    SELECT COALESCE(SUM(p.monto),0) INTO v_total_pagos FROM Pagos p JOIN Facturas f ON p.id_factura = f.id_factura WHERE f.id_cliente = p_id_cliente;
+    RETURN v_total_facturas - v_total_pagos;
+END $$
+
+DELIMITER ;
+
+-- Objetivo de las funciones: encapsular lógicas de cálculo reutilizables (totales, saldos, estado de servicio).
+-- Tablas: DetalleOrden, ServiciosContratados, Facturas, Pagos
+
+-- 6) STORED PROCEDURES (MySQL)
+DELIMITER $$
+
+-- 6.1: Generar factura por servicio (usa precio del plan)
+CREATE PROCEDURE sp_generar_factura_servicio(IN p_id_servicio INT)
+BEGIN
+    DECLARE v_cliente INT;
+    DECLARE v_plan INT;
+    DECLARE v_precio DECIMAL(12,2);
+    DECLARE v_fecha DATE;
+    SELECT id_cliente, id_plan INTO v_cliente, v_plan FROM ServiciosContratados WHERE id_servicio = p_id_servicio;
+    SELECT precio_mensual INTO v_precio FROM Planes WHERE id_plan = v_plan;
+    SET v_fecha = CURDATE();
+    INSERT INTO Facturas (id_cliente, fecha_emision, monto_total, tipo, id_servicio, id_orden)
+    VALUES (v_cliente, v_fecha, v_precio, 'Servicio', p_id_servicio, NULL);
+END $$
+
+-- Objetivo: automatizar la facturación recurrente de un servicio mensual.
+-- Tablas: ServiciosContratados, Planes, Facturas
+
+-- 6.2: Registrar orden con detalles (y actualizar stock)
+-- Parámetros: cliente, fecha, estado. Los detalles se pasan por una tabla temporal temporal_detalle(id_producto, cantidad, precio_unitario)
+-- Nota: en MySQL real, podrías usar JSON o tablas temporales. Para simplicidad se asume que existe una tabla temporal `tmp_detalle` creada por el cliente antes de llamar.
+CREATE PROCEDURE sp_registrar_orden_con_detalle(IN p_id_cliente INT, IN p_fecha DATE, IN p_estado VARCHAR(20))
+BEGIN
+    DECLARE v_id_orden INT;
+    INSERT INTO Ordenes (id_cliente, fecha_compra, estado) VALUES (p_id_cliente, p_fecha, p_estado);
+    SET v_id_orden = LAST_INSERT_ID();
+    -- Si existe tabla temporal tmp_detalle, insertarla
+    IF (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'tmp_detalle') > 0 THEN
+        INSERT INTO DetalleOrden(id_orden, id_producto, cantidad, precio_unitario)
+        SELECT v_id_orden, id_producto, cantidad, precio_unitario FROM tmp_detalle;
+        -- Actualizar stock
+        UPDATE Productos p JOIN (
+            SELECT id_producto, SUM(cantidad) AS total_cant FROM tmp_detalle GROUP BY id_producto
+        ) t ON p.id_producto = t.id_producto
+        SET p.stock = p.stock - t.total_cant;
+        -- Borrar tmp_detalle
+        DROP TABLE IF EXISTS tmp_detalle;
+    END IF;
+END $$
+
+-- Objetivo: facilitar la creación de ordenes y su detalle desde procesos externos (web, API).
+-- Tablas: Ordenes, DetalleOrden, Productos
+
+-- 6.3: Registrar pago y validar si factura queda saldada
+CREATE PROCEDURE sp_registrar_pago(IN p_id_factura INT, IN p_fecha_pago DATE, IN p_monto DECIMAL(12,2), IN p_metodo VARCHAR(50))
+BEGIN
+    INSERT INTO Pagos (id_factura, fecha_pago, monto, metodo_pago) VALUES (p_id_factura, p_fecha_pago, p_monto, p_metodo);
+    -- Opcional: lógica de notificación o cambio de estado de la factura si monto cubre total (no tenemos campo estado en facturas por simplicidad)
+END $$
+
+DELIMITER ;
+
+-- Objetivo: encapsular el registro de pagos y permitir automatizaciones (notificaciones, conciliación).
+-- Tablas: Pagos, Facturas
+
+-- 7) TRIGGERS
+-- 7.1: Antes de insertar detalle de orden: verificar stock suficiente
+DELIMITER $$
+CREATE TRIGGER trg_before_insert_detalleorden
+BEFORE INSERT ON DetalleOrden
+FOR EACH ROW
+BEGIN
+    DECLARE v_stock INT;
+    SELECT stock INTO v_stock FROM Productos WHERE id_producto = NEW.id_producto FOR UPDATE;
+    IF v_stock IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Producto inexistente';
+    END IF;
+    IF v_stock < NEW.cantidad THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock insuficiente para el producto';
+    END IF;
+END $$
+
+-- 7.2: Después de insertar detalle de orden: descontar stock
+CREATE TRIGGER trg_after_insert_detalleorden
+AFTER INSERT ON DetalleOrden
+FOR EACH ROW
+BEGIN
+    UPDATE Productos SET stock = stock - NEW.cantidad WHERE id_producto = NEW.id_producto;
+END $$
+
+-- 7.3: Después de insertar Factura: si es producto y tiene id_orden, recalcular monto (seguridad)
+CREATE TRIGGER trg_after_insert_factura
+AFTER INSERT ON Facturas
+FOR EACH ROW
+BEGIN
+    DECLARE v_total DECIMAL(12,2);
+    IF NEW.id_orden IS NOT NULL THEN
+        SELECT COALESCE(SUM(cantidad * precio_unitario),0) INTO v_total FROM DetalleOrden WHERE id_orden = NEW.id_orden;
+        IF NEW.monto_total <> v_total THEN
+            UPDATE Facturas SET monto_total = v_total WHERE id_factura = NEW.id_factura;
+        END IF;
+    END IF;
+END $$
+
+DELIMITER ;
+
+-- 8) Consultas / Informes útiles (ejemplos)
+-- 8.1: Facturación por mes y año
+SELECT * FROM v_facturacion_mensual;
+
+-- 8.2: Top 5 productos más vendidos (por cantidad)
+SELECT p.id_producto, p.nombre, SUM(do.cantidad) AS total_vendido
+FROM DetalleOrden do
+JOIN Productos p ON do.id_producto = p.id_producto
+GROUP BY p.id_producto
+ORDER BY total_vendido DESC
+LIMIT 5;
+
+-- 8.3: Clientes con saldo pendiente (vista ya creada)
+SELECT * FROM v_clientes_saldo_pendiente;
+
+-- 8.4: Ingresos por plan (sumar facturas que correspondan a servicios -> id_servicio not null)
+SELECT pl.id_plan, pl.nombre_plan, COUNT(f.id_factura) AS facturas, SUM(f.monto_total) AS ingresos
+FROM Facturas f
+JOIN ServiciosContratados sc ON f.id_servicio = sc.id_servicio
+JOIN Planes pl ON sc.id_plan = pl.id_plan
+GROUP BY pl.id_plan, pl.nombre_plan
+ORDER BY ingresos DESC;
+
+-- 8.5: Reporte de órdenes con totales
+SELECT * FROM v_ordenes_detalle_total;
+
+-- 9) Indices y mantenimiento básico (recomendaciones implementadas)
+CREATE INDEX idx_facturas_fecha ON Facturas(fecha_emision);
+CREATE INDEX idx_pagos_fecha ON Pagos(fecha_pago);
+CREATE INDEX idx_productos_nombre ON Productos(nombre);
+
+-- FIN del archivo InterHogar
